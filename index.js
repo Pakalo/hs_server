@@ -100,6 +100,39 @@ wss.on('connection', function(ws, req) {
             const data = JSON.parse(datastring.replace(/'/g, '"'));
             if (data.auth === "chatappauthkey231r4") {
                 try {
+                    if (data.cmd === 'getPlayerlist') {
+                        try {
+                            const gameCode = data.gameCode;
+                            console.log("Game code : " + gameCode);
+                            
+                            // Find the room based on the game code
+                            const room = await Room.findOne({ where: { gameCode: gameCode } });
+                    
+                            if (room) {
+                                // Find all userParties associated with the room
+                                const userParties = await userParty.findAll({ where: { gameID: room.id } });
+                    
+                                // Fetch user information for each userParty
+                                const playerList = await Promise.all(userParties.map(async (userParty) => {
+                                    const user = await User.findOne({ where: { id: userParty.UserId } });
+                                    return user ? user.username : null;
+                                }));
+                    
+                                // Remove null entries (handling errors where user information couldn't be fetched)
+                                const filteredPlayerList = playerList.filter((player) => player !== null);
+                    
+                                // Send success response with the player list
+                                ws.send('{"cmd":"' + data.cmd + '","status":"success","players":' + JSON.stringify(filteredPlayerList) + '}');
+                            } else {
+                                // Send error response if the room is not found
+                                ws.send('{"cmd":"' + data.cmd + '","status":"error","message":"Room not found"}');
+                            }
+                        } catch (error) {
+                            console.error('Error fetching player list:', error);
+                            // Send error response
+                            ws.send('{"cmd":"' + data.cmd + '","status":"error","message":"Internal server error"}');
+                        }
+                    }
                     if (data.cmd === 'createGame') {
                         // Handle game creation logic here
                         console.log("Game created with data:", data);
@@ -145,14 +178,12 @@ wss.on('connection', function(ws, req) {
                         console.log("Game created with data:", data);
                         
                     }                 
-
                     const user = await User.findOne({
                         where: {
                             email: data.email,
                             password: crypto.createHash('md5').update(data.password || '').digest('hex')
                         }
                     });
-
                     if (data.cmd === 'signup') {
                         // Vérifier si l'email existe déjà
                         User.findOne({ where: { email: data.email } })
@@ -221,7 +252,7 @@ wss.on('connection', function(ws, req) {
                                     // Vérifier si le mot de passe est correct
                                     if (hexPwd === user.password) {
                                         // Envoyer le nom d'utilisateur à l'utilisateur et le code de statut est "succes"
-                                        const loginData = '{"userId":"' + user.id + '","username":"' + user.username + '","status":"success"}';
+                                        const loginData = '{"email":"' + user.email + '","DateCreation":"' + user.createdAt+ '","userId":"' + user.id + '","username":"' + user.username + '","status":"success"}';
                                         // Envoyer les données à l'utilisateur
                                         console.log("Envoyé : " + loginData);
                                         ws.send(loginData);
@@ -335,6 +366,7 @@ async function generateUniqueGameCode() {
 }
 app.use(express.static('public'));
 const bodyParser = require('body-parser'); // Add this line
+const { DATE } = require('sequelize');
 app.use(bodyParser.json());
 app.use(resetPasswordRoute);
 

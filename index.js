@@ -78,14 +78,56 @@ wss.on('connection', function(ws, req) {
             console.log(data.selectedPlayers);
             if (data.auth === "chatappauthkey231r4") {
                 try {
-                    if (data.gameCode) {
-                        console.log("Game code socket link: " + data.gameCode);
+                    if (data.gameCode && data.cmd === 'getPlayerlist') {
+                        console.log("☢️ Game code socket link: " + data.gameCode);
                         if (!connectionsByGameCode[data.gameCode]) {
                             connectionsByGameCode[data.gameCode] = [];
                         }
-                        connectionsByGameCode[data.gameCode].push(ws);
+                    
+                        // Vérifier si le WebSocket existe déjà dans la liste
+                        const existingSocketIndex = connectionsByGameCode[data.gameCode].findIndex(socket => socket === ws);
+                    
+                        if (existingSocketIndex === -1) {
+                            // Ajouter le WebSocket à la liste uniquement s'il n'existe pas déjà
+                            connectionsByGameCode[data.gameCode].push(ws);
+                        }
+                    
+                        console.log("socket list" + connectionsByGameCode[data.gameCode]);
                     }
                     if (data.cmd === 'getPlayerlist') {
+                        try {
+                            const gameCode = data.gameCode;
+                            console.log("Game code : " + gameCode);
+                            
+                            // Find the room based on the game code
+                            const room = await Room.findOne({ where: { gameCode: gameCode } });
+                    
+                            if (room) {
+                                // Find all userParties associated with the room
+                                const userParties = await userParty.findAll({ where: { gameID: room.id } });
+                    
+                                // Fetch user information for each userParty
+                                const playerList = await Promise.all(userParties.map(async (userParty) => {
+                                    const user = await User.findOne({ where: { id: userParty.UserId } });
+                                    return user ? user.username : null;
+                                }));
+                    
+                                // Remove null entries (handling errors where user information couldn't be fetched)
+                                const filteredPlayerList = playerList.filter((player) => player !== null);
+                    
+                                // Send success response with the player list
+                                ws.send('{"cmd":"' + data.cmd + '","status":"success","players":' + JSON.stringify(filteredPlayerList) + '}');
+                            } else {
+                                // Send error response if the room is not found
+                                ws.send('{"cmd":"' + data.cmd + '","status":"error","message":"Room not found"}');
+                            }
+                        } catch (error) {
+                            console.error('Error fetching player list:', error);
+                            // Send error response
+                            ws.send('{"cmd":"' + data.cmd + '","status":"error","message":"Internal server error"}');
+                        }
+                    }
+                    if (data.cmd === 'UpdatePlayerlist') {
                         try {
                             const gameCode = data.gameCode;
                             console.log("Game code : " + gameCode);
@@ -209,14 +251,40 @@ wss.on('connection', function(ws, req) {
 
                         sendUpdateToGamePlayers(data.gameCode, '{"cmd":"playerJoined","playerName":"' + data.userId + '"}');
                     }
-                    // if (data.cmd === 'updateSelectedPlayers')
-                    // {
-                    //     sendUpdateToGamePlayers(data.gameCode, '{"cmd":"updateSelectedPlayers","selectedPlayers":' + JSON.stringify(data.selectedPlayers) + '}');
-                    //     data.selectedPlayers.forEach(player => {
-                    //         console.log("player : " + player);
-                    //     }
-                    //     );
-                    // }
+                    if (data.cmd === 'updateSeekerStatus') {
+                        try {
+                            // Trouver la partie basée sur le code de jeu
+                            const room = await Room.findOne({ where: { gameCode: data.gameCode } });
+                    
+                            if (room) {
+                                // Trouver tous les userParties associés à la partie
+                                const userParties = await userParty.findAll({ where: { gameID: room.id } });
+                    
+                                // Mettre à jour le statut Seeker en fonction des joueurs sélectionnés
+                                await Promise.all(userParties.map(async (userParty) => {
+                                    const user = await User.findOne({ where: { id: userParty.UserId } });
+                                    if (user && data.selectedPlayers.includes(user.username)) {
+                                        // Si le pseudo de l'utilisateur est dans la liste des joueurs sélectionnés, définissez Seeker à true
+                                        await userParty.update({ Seeker: true });
+                                    } else {
+                                        // Sinon, définissez Seeker à false
+                                        await userParty.update({ Seeker: false });
+                                    }
+                                }));
+                    
+                                sendUpdateToGamePlayers(data.gameCode, '{"cmd":"seekerStatusUpdated","selectedPlayers":' + JSON.stringify(data.selectedPlayers) + '}');
+                                // Envoyer une réponse de succès au client
+                                ws.send('{"cmd":"' + data.cmd + '","status":"success"}');
+                            } else {
+                                // Envoyer une réponse d'erreur si la partie n'est pas trouvée
+                                ws.send('{"cmd":"' + data.cmd + '","status":"error","message":"Room not found"}');
+                            }
+                        } catch (error) {
+                            console.error('Error updating Seeker status:', error);
+                            // Envoyer une réponse d'erreur
+                            ws.send('{"cmd":"' + data.cmd + '","status":"error","message":"Internal server error"}');
+                        }
+                    }
                     const user = await User.findOne({
                         where: {
                             email: data.email,

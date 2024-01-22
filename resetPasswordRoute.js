@@ -79,43 +79,7 @@ router.post('/reset-password/:token', async (req, res) => {
   }
 });
 
-router.post('/reset-password', async (req, res) => {
-  const { email } = req.body;
 
-  try {
-    const user = await User.findOne({ where: { email } });
-
-    if (!user) {
-      return res.status(404).json({ message: 'Utilisateur non trouvé' });
-    }
-
-    const token = crypto.randomBytes(20).toString('hex');
-    user.resettoken = token;
-    user.resettokenexpiry = Date.now() + 14400000; // 4 heures
-    await user.save();
-
-    const resetLink = `https://app.hideandstreet.furrball.fr/reset-password/${token}`;
-    const mailOptions = {
-      from: process.env.SMTP_USER,
-      to: email,
-      subject: 'Réinitialisation du mot de passe',
-      text: `Cliquez sur le lien suivant pour réinitialiser votre mot de passe : ${resetLink}`,
-    };
-
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error('Erreur lors de l\'envoi de l\'e-mail :', error);
-        res.status(500).json({ message: 'Erreur lors de l\'envoi de l\'e-mail' });
-      } else {
-        console.log('E-mail envoyé :', info.response);
-        res.json({ message: 'Un e-mail de réinitialisation a été envoyé à votre adresse.' });
-      }
-    });
-  } catch (error) {
-    console.error('Erreur lors de la réinitialisation du mot de passe :', error);
-    res.status(500).json({ message: 'Erreur lors de la réinitialisation du mot de passe' });
-  }
-});
 
 router.use(express.static('public'));
 const bodyParser = require('body-parser'); // Ajoutez cette ligne

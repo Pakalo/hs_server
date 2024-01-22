@@ -7,11 +7,9 @@ const Room = require('./table/room'); // Importer le modèle Room depuis le fich
 const userParty = require('./table/userParty'); // Importer le modèle userParty depuis le fichier existant
 const nodemailer = require('nodemailer');
 
-
 const resetPasswordRoute = require('./resetPasswordRoute'); // Remplacez par le chemin réel de votre route
 
 const createGameRoute = require('./createGameRoute'); // GameRoute
-
 
 /////// HTTPS ///////
 const https = require('https');
@@ -27,7 +25,6 @@ const app = express();
 const server = https.createServer(options, app);
 const wss = new Server({ server });
 
-
 fs.readdir('/etc/letsencrypt/live/app.hideandstreet.furrball.fr/', (err, files) => {
     if (err) {
       console.error('Erreur lors de la lecture du répertoire :', err);
@@ -37,29 +34,9 @@ fs.readdir('/etc/letsencrypt/live/app.hideandstreet.furrball.fr/', (err, files) 
     console.log('Fichiers dans le répertoire :', files);
   });
 
-//////////////////////
-
-
-// /////// HTTP ///////
-
-// const app = express();
-// const server = http.createServer(app);
-// const wss = new Server({ server });
-// /////////////////////
-
-
-
-
-
 require('dotenv').config();
 
 const PORT = process.env.EXPRESS_PORT;
-
-
-
-
-
-
 
 app.use(express.json()); // Utilisez le middleware pour traiter les données JSON
 
@@ -91,15 +68,23 @@ userParty.sync({ alter: true })
     console.error('Error syncing Room model:', error);
   });
 
-
+  const connectionsByGameCode = {};
 
 wss.on('connection', function(ws, req) {
     ws.on('message', async message => {
         const datastring = message.toString();
         if (datastring.charAt(0) === "{") {
             const data = JSON.parse(datastring.replace(/'/g, '"'));
+            console.log(data.selectedPlayers);
             if (data.auth === "chatappauthkey231r4") {
                 try {
+                    if (data.gameCode) {
+                        console.log("Game code socket link: " + data.gameCode);
+                        if (!connectionsByGameCode[data.gameCode]) {
+                            connectionsByGameCode[data.gameCode] = [];
+                        }
+                        connectionsByGameCode[data.gameCode].push(ws);
+                    }
                     if (data.cmd === 'getPlayerlist') {
                         try {
                             const gameCode = data.gameCode;
@@ -151,6 +136,7 @@ wss.on('connection', function(ws, req) {
                                         creatorId: data.creatorId,
                                         center: data.center,
                                         duration: data.duration,
+                                        hidingDuration: data.hidingDuration,
                                         gameCode: await generateUniqueGameCode(), // Use await to handle the promise
                                     });
                                     // Now you can send a response or further process the data if needed
@@ -178,6 +164,59 @@ wss.on('connection', function(ws, req) {
                         console.log("Game created with data:", data);
                         
                     }                 
+                    if (data.cmd === 'joinGame') {
+                        // Handle joining game logic here
+                        console.log("Joining game with data:", data);
+                      
+                        try {
+                          // Find the room based on the game code
+                          const room = await Room.findOne({ where: { gameCode: data.gameCode } });
+                      
+                          if (room) {
+                            // Check if the user is already part of the game
+                            const existingUserParty = await userParty.findOne({
+                              where: { UserId: data.userId, gameID: room.id },
+                            });
+                      
+                            if (existingUserParty) {
+                              // User is already part of the game
+                              ws.send('{"cmd":"' + data.cmd + '","status":"error","message":"User is already part of the game"}');
+                            } else {
+                              // Add the user to the userParty table for the specified game
+                              const addUserParty = await userParty.create({
+                                UserId: data.userId,
+                                gameID: room.id,
+                              });
+                      
+                              // Send success message to the client
+                              ws.send('{"cmd":"' + data.cmd + '","status":"success", "gameCode":"' + data.gameCode + '","isAdmin":"' + room.creatorId + '"}');
+                      
+                              // Notify all connected clients about the new player
+                              const connectedClients = getConnectedClientsForGame(room.id);
+                              connectedClients.forEach(client => {
+                                client.send('{"cmd":"playerJoined","playerName":"' + data.userId + '"}');
+                              });
+                            }
+                          } else {
+                            // Send error response if the room is not found
+                            ws.send('{"cmd":"' + data.cmd + '","status":"error","message":"Room not found"}');
+                          }
+                        } catch (error) {
+                          console.error('Error joining game:', error);
+                          // Send error response
+                          ws.send('{"cmd":"' + data.cmd + '","status":"error","message":"Internal server error"}');
+                        }
+
+                        sendUpdateToGamePlayers(data.gameCode, '{"cmd":"playerJoined","playerName":"' + data.userId + '"}');
+                    }
+                    // if (data.cmd === 'updateSelectedPlayers')
+                    // {
+                    //     sendUpdateToGamePlayers(data.gameCode, '{"cmd":"updateSelectedPlayers","selectedPlayers":' + JSON.stringify(data.selectedPlayers) + '}');
+                    //     data.selectedPlayers.forEach(player => {
+                    //         console.log("player : " + player);
+                    //     }
+                    //     );
+                    // }
                     const user = await User.findOne({
                         where: {
                             email: data.email,
@@ -343,11 +382,25 @@ wss.on('connection', function(ws, req) {
         }
     }
 });
+ws.on('close', () => {
+    // Parcourez toutes les gameId associées à cette connexion et retirez la connexion
+    Object.keys(connectionsByGameCode).forEach(gameCode => {
+        connectionsByGameCode[gameCode] = connectionsByGameCode[gameCode].filter(connection => connection !== ws);
+    });
 });
+});
+
+function sendUpdateToGamePlayers(gameCode, message) {
+    const connections = connectionsByGameCode[gameCode] || [];
+    connections.forEach(connection => {
+        connection.send(message);
+        console.log("connection envoyé  " + message);
+    });
+}
 
 async function generateUniqueGameCode() {
     const codeLength = 6;
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
     while (true) {
         const generatedCode = Array.from({ length: codeLength }, () => characters[Math.floor(Math.random() * characters.length)]).join('');
@@ -364,13 +417,9 @@ async function generateUniqueGameCode() {
         }
     }
 }
+
 app.use(express.static('public'));
 const bodyParser = require('body-parser'); // Add this line
 const { DATE } = require('sequelize');
 app.use(bodyParser.json());
 app.use(resetPasswordRoute);
-
-
-
-// Ajouts de dorian : 
-app.use('/api', createGameRoute);

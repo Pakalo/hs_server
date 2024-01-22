@@ -18,6 +18,10 @@ const Room = sequelize.define('Room', {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
+  hidingDuration: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
   gameCode: {
     type: DataTypes.STRING,
     allowNull: false,

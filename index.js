@@ -77,7 +77,7 @@ wss.on('connection', function(ws, req) {
             const data = JSON.parse(datastring.replace(/'/g, '"'));
             if (data.auth === "chatappauthkey231r4") {
                 try {
-                    if (data.gameCode && data.cmd === 'getPlayerlist') {
+                    if (data.gameCode && (data.cmd === 'getPlayerlist' || data.cmd === 'setPositionPlayer')) {
                         console.log("☢️ Game code socket link: " + data.gameCode);
                         if (!connectionsByGameCode[data.gameCode]) {
                             connectionsByGameCode[data.gameCode] = [];
@@ -124,6 +124,43 @@ wss.on('connection', function(ws, req) {
                             }
                         } catch (error) {
                             console.error('Error fetching player list:', error);
+                            // Send error response
+                            ws.send('{"cmd":"' + data.cmd + '","status":"error","message":"Internal server error"}');
+                        }
+                    }
+                    if (data.cmd === 'setPositionPlayer') {
+                        console.log("\n\n");
+                        console.log("⌨️ Commande : " + data.cmd + "\n");
+                        console.log("🤝 GameCode : " + data.gameCode + "\n");
+                        console.log("🙋 Player ID : " + data.id + "\n");
+                        console.log("📌 Position player : " + data.position);
+                        console.log("\n\n");
+                    
+                        try {
+                            // Find the room based on the game code
+                            const room = await Room.findOne({ where: { gameCode: data.gameCode } });
+                    
+                            if (room) {
+                                // Update the user's position in the userParty table for the specified game
+                                const updateUserParty = await userParty.update(
+                                    { Position: data.position },
+                                    { where: { UserId: data.playerId, gameID: room.id } }
+                                );
+                                
+                                if (updateUserParty[0] === 0) {
+                                    // User is not part of the game
+                                    ws.send('{"cmd":"' + data.cmd + '","status":"error","message":"User is not part of the game"}');
+                                } else {
+                                    // Send success message to the client
+                                    ws.send('{"cmd":"' + data.cmd + '","status":"success", "gameCode":"' + data.gameCode + '"}');
+                                
+                                }
+                            } else {
+                                // Send error response if the room is not found
+                                ws.send('{"cmd":"' + data.cmd + '","status":"error","message":"Room not found"}');
+                            }
+                        } catch (error) {
+                            console.error('Error setting player position:', error);
                             // Send error response
                             ws.send('{"cmd":"' + data.cmd + '","status":"error","message":"Internal server error"}');
                         }
@@ -494,6 +531,7 @@ wss.on('connection', function(ws, req) {
 });
 ws.on('close', () => {
     // Parcourez toutes les gameId associées à cette connexion et retirez la connexion
+    console.log("connection fermé");
     Object.keys(connectionsByGameCode).forEach(gameCode => {
         connectionsByGameCode[gameCode] = connectionsByGameCode[gameCode].filter(connection => connection !== ws);
     });
@@ -531,5 +569,6 @@ async function generateUniqueGameCode() {
 app.use(express.static('public'));
 const bodyParser = require('body-parser'); // Add this line
 const { DATE } = require('sequelize');
+const { log } = require('console');
 app.use(bodyParser.json());
 app.use(resetPasswordRoute);

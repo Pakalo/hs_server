@@ -75,7 +75,6 @@ wss.on('connection', function(ws, req) {
         const datastring = message.toString();
         if (datastring.charAt(0) === "{") {
             const data = JSON.parse(datastring.replace(/'/g, '"'));
-            console.log(data.selectedPlayers);
             if (data.auth === "chatappauthkey231r4") {
                 try {
                     if (data.gameCode && data.cmd === 'getPlayerlist') {
@@ -127,6 +126,48 @@ wss.on('connection', function(ws, req) {
                             console.error('Error fetching player list:', error);
                             // Send error response
                             ws.send('{"cmd":"' + data.cmd + '","status":"error","message":"Internal server error"}');
+                        }
+                    }
+                    if (data.cmd === 'startGame') {
+                        console.log("Starting game with data:", data);
+
+                        try {
+                            // Find the room based on the game code
+                            const room = await Room.findOne({ where: { gameCode: data.gameCode } });
+
+                            if (room) {
+                                console.log("🧕 Room found");
+                                // Update the room's startingTimeStamp
+                                await Room.update({ startingTimeStamp: data.startingTimeStamp }, { where: { gameCode: data.gameCode } });
+                                console.log("⛷️ Room updated");
+                                // Prepare the player dictionary
+                                const players = {};
+                                const userParties = await userParty.findAll({ where: { gameID: room.id } });
+                                console.log('userParties:', userParties);
+                                userParties.forEach(userParty => {
+                                    players[userParty.UserId] = userParty.Seeker;
+                                });
+                                console.log('players:', players);
+
+                                // Prepare the data to send to clients
+                                const partyStartInfo = {
+                                    center: room.center,
+                                    duration: room.duration,
+                                    hidingDuration: room.hidingDuration,
+                                    startingTimeStamp: data.startingTimeStamp,
+                                    radius: room.radius,
+                                    players: players
+                                };
+                                console.log('partyStartInfo:', partyStartInfo);
+                                sendUpdateToGamePlayers(data.gameCode, '{"cmd":"partyStartInfo","data":' + JSON.stringify(partyStartInfo) + '}');
+                            } else {
+                                // Send error response if the room is not found
+                                ws.send(JSON.stringify({ cmd: data.cmd, status: 'error', message: 'Room not found' }));
+                            }
+                        } catch (error) {
+                            console.error('Error starting game:', error);
+                            // Send error response
+                            ws.send(JSON.stringify({ cmd: data.cmd, status: 'error', message: 'Internal server error' }));
                         }
                     }
                     if (data.cmd === 'UpdatePlayerlist') {
@@ -207,7 +248,7 @@ wss.on('connection', function(ws, req) {
                         }
                         console.log("Game created with data:", data);
                         
-                    }                 
+                    }
                     if (data.cmd === 'joinGame') {
                         // Handle joining game logic here
                         console.log("Joining game with data:", data);
@@ -439,7 +480,6 @@ wss.on('connection', function(ws, req) {
                             ws.send('{"cmd":"resetPassword","status":"error"}');
                         }
                     }
-
                     if (user) {
                         ws.send(JSON.stringify({ success: true, message: 'Login successful' }));
                     } else {

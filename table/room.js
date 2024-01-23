@@ -25,6 +25,10 @@ const Room = sequelize.define('Room', {
   gameCode: {
     type: DataTypes.STRING,
     allowNull: false,
+  },
+  startingTimeStamp: {
+    type: DataTypes.DATE,
+    allowNull: true,
   }
 }, {
     timestamps: true,

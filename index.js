@@ -116,7 +116,9 @@ wss.on('connection', function(ws, req) {
                                 const filteredPlayerList = playerList.filter((player) => player !== null);
                     
                                 // Send success response with the player list
+                                
                                 ws.send('{"cmd":"' + data.cmd + '","status":"success","players":' + JSON.stringify(filteredPlayerList) + '}');
+                                console.log('{"cmd":"' + data.cmd + '","status":"success","adminID":'+ room.creatorId +',"players":' + JSON.stringify(filteredPlayerList) + '}');
                             } else {
                                 // Send error response if the room is not found
                                 ws.send('{"cmd":"' + data.cmd + '","status":"error","message":"Room not found"}');

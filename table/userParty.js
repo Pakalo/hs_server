@@ -10,6 +10,11 @@ const userParty = sequelize.define('userParty', {
     type: DataTypes.BOOLEAN,
     allowNull: true,
   },
+  Found: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+  },
   Position: {
     type: DataTypes.JSONB,
     allowNull: true,

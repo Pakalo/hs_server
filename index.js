@@ -165,6 +165,95 @@ wss.on('connection', function(ws, req) {
                             ws.send('{"cmd":"' + data.cmd + '","status":"error","message":"Internal server error"}');
                         }
                     }
+                    if (data.cmd === 'getInGamePlayerlist') {
+                        console.log("\n\n");
+                        console.log("⌨️ Commande : " + data.cmd);
+                        console.log("🤝 GameCode : " + data.gameCode);
+                        console.log("\n");
+                    
+                        try {
+                            // Find the room based on the game code
+                            const room = await Room.findOne({ where: { gameCode: data.gameCode } });
+                    
+                            if (room) {
+                                // Get the users in the userParty table for the specified game
+                                const userParties = await userParty.findAll({
+                                    where: { gameID: room.id }
+                                });
+                    
+                                // Fetch user information for each userParty
+                                const players = await Promise.all(userParties.map(async (userParty) => {
+                                    const user = await User.findOne({ where: { id: userParty.UserId } });
+                                    return {
+                                        username: user ? user.username : null,
+                                        seeker: userParty.Seeker,
+                                        found: userParty.Found
+                                    };
+                                }));
+
+                                console.log('players:', players);
+                    
+                                // Send the dictionary of players to the client
+                                ws.send(JSON.stringify({
+                                    cmd: 'returnPlayerList',
+                                    players: players
+                                }));
+                            } else {
+                                // Send error response if the room is not found
+                                ws.send(JSON.stringify({ cmd: data.cmd, status: 'error', message: 'Room not found' }));
+                            }
+                        } catch (error) {
+                            console.error('Error getting player list:', error);
+                            // Send error response
+                            ws.send(JSON.stringify({ cmd: data.cmd, status: 'error', message: 'Internal server error' }));
+                        }
+                    }
+                    if (data.cmd === 'setFoundStatus') {
+                        console.log("\n\n");
+                        console.log("⌨️ Commande : " + data.cmd);
+                        console.log("🤝 GameCode : " + data.gameCode);
+                        console.log("🙋 Player ID : " + data.playerId);
+                        console.log("\n");
+                    
+                        try {
+                            // Find the room based on the game code
+                            const room = await Room.findOne({ where: { gameCode: data.gameCode } });
+                    
+                            if (room) {
+                                // Find the userParty entry for the specified player in the specified game
+                                const userPartyEntry = await userParty.findOne({
+                                    where: { gameID: room.id, UserId: data.playerId }
+                                });
+                    
+                                if (userPartyEntry) {
+                                    // Set the Found status to true
+                                    userPartyEntry.Found = true;
+                                    await userPartyEntry.save();
+                    
+                                    // Send a success response to the client
+                                    ws.send(JSON.stringify({ cmd: data.cmd, status: 'success', message: 'Found status updated' }));
+                                    const remainingPlayers = await userParty.count({
+                                        where: { gameID: room.id, Seeker: false, Found: false }
+                                    });
+                    
+                                    if (remainingPlayers === 0) {
+                                        // If there are no remaining players, send the 'seeker win' command to the client
+                                        ws.send(JSON.stringify({ cmd: 'seekerWin', status: 'success', message: 'The seeker has found all players' }));
+                                    }
+                                } else {
+                                    // Send error response if the userParty entry is not found
+                                    ws.send(JSON.stringify({ cmd: data.cmd, status: 'error', message: 'Player not found in this game' }));
+                                }
+                            } else {
+                                // Send error response if the room is not found
+                                ws.send(JSON.stringify({ cmd: data.cmd, status: 'error', message: 'Room not found' }));
+                            }
+                        } catch (error) {
+                            console.error('Error setting found status:', error);
+                            // Send error response
+                            ws.send(JSON.stringify({ cmd: data.cmd, status: 'error', message: 'Internal server error' }));
+                        }
+                    }
                     if (data.cmd === 'setOutOfZone') {
                         console.log("\n\n");
                         console.log("⌨️ Commande : " + data.cmd + "\n");
@@ -618,6 +707,7 @@ ws.on('close', () => {
 
 function sendUpdateToGamePlayers(gameCode, message) {
     const connections = connectionsByGameCode[gameCode] || [];
+    console.log("\n\n⚽ Nombre de socket rélié à " + gameCode + " : " + connections.length + "\n")
     connections.forEach(connection => {
         connection.send(message);
         console.log("connection envoyé  " + message);

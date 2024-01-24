@@ -1,6 +1,6 @@
-const User = require('./table/user'); // Importer le modèle User depuis le fichier existant
-const Room = require('./table/room'); // Importer le modèle Room depuis le fichier existant
-const userParty = require('./table/userParty'); // Importer le modèle userParty depuis le fichier existant
+const User = require('../table/user'); // Importer le modèle User depuis le fichier existant
+const Room = require('../table/room'); // Importer le modèle Room depuis le fichier existant
+const userParty = require('../table/userParty'); // Importer le modèle userParty depuis le fichier existant
 
 
 function dbSync() {

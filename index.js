@@ -9,7 +9,7 @@ const resetPasswordRoute = require('./resetPasswordRoute'); // Remplacez par le 
 const createGameRoute = require('./createGameRoute'); // GameRoute
 
 // Importer les modèles Sequelize
-const dbSync = require('./dbSync');
+const dbSync = require('./db/dbSync');
 dbSync();
 
 

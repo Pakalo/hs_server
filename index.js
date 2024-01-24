@@ -238,7 +238,7 @@ wss.on('connection', function(ws, req) {
                     
                                     if (remainingPlayers === 0) {
                                         // If there are no remaining players, send the 'seeker win' command to the client
-                                        ws.send(JSON.stringify({ cmd: 'seekerWin', status: 'success', message: 'The seeker has found all players' }));
+                                        sendUpdateToGamePlayers(data.gameCode, '{"cmd":"seekerWin"}');
                                     }
                                 } else {
                                     // Send error response if the userParty entry is not found

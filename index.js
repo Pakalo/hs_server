@@ -130,11 +130,11 @@ wss.on('connection', function(ws, req) {
                     }
                     if (data.cmd === 'setPositionPlayer') {
                         console.log("\n\n");
-                        console.log("⌨️ Commande : " + data.cmd + "\n");
-                        console.log("🤝 GameCode : " + data.gameCode + "\n");
-                        console.log("🙋 Player ID : " + data.id + "\n");
+                        console.log("⌨️ Commande : " + data.cmd);
+                        console.log("🤝 GameCode : " + data.gameCode);
+                        console.log("🙋 Player ID : " + data.id);
                         console.log("📌 Position player : " + data.position);
-                        console.log("\n\n");
+                        console.log("\n");
                     
                         try {
                             // Find the room based on the game code
@@ -163,6 +163,45 @@ wss.on('connection', function(ws, req) {
                             console.error('Error setting player position:', error);
                             // Send error response
                             ws.send('{"cmd":"' + data.cmd + '","status":"error","message":"Internal server error"}');
+                        }
+                    }
+                    if (data.cmd === 'setOutOfZone') {
+                        console.log("\n\n");
+                        console.log("⌨️ Commande : " + data.cmd + "\n");
+                        console.log("🤝 GameCode : " + data.gameCode + "\n");
+                        console.log("🙋 Player ID : " + data.id + "\n");
+                        console.log("📌 Position player : " + data.position);
+                        console.log("\n\n");
+                    
+                        try {
+                            // Find the room based on the game code
+                            const room = await Room.findOne({ where: { gameCode: data.gameCode } });
+                    
+                            if (room) {
+                                // Find the user based on the id
+                                const user = await User.findOne({ where: { id: data.playerId } });
+                    
+                                if (user) {
+                                    // Create the message to send
+                                    const message = JSON.stringify({
+                                        cmd: 'playerOutOfZone',
+                                        playerId: data.playerId,
+                                        playerName: user.username,
+                                        position: data.position
+                                    });
+                            
+                                    // Use the function to send the update to all game players
+                                    sendUpdateToGamePlayers(data.gameCode, message);
+                                }
+                            
+                                } else {
+                                    // Send error response if the user is not found
+                                    ws.send(JSON.stringify({ cmd: data.cmd, status: 'error', message: 'User not found' }));
+                                }
+                        } catch (error) {
+                            console.error('Error setting out of zone status:', error);
+                            // Send error response
+                            ws.send(JSON.stringify({ cmd: data.cmd, status: 'error', message: 'Internal server error' }));
                         }
                     }
                     if (data.cmd === 'startGame') {
@@ -330,6 +369,45 @@ wss.on('connection', function(ws, req) {
                         }
 
                         sendUpdateToGamePlayers(data.gameCode, '{"cmd":"playerJoined","playerName":"' + data.userId + '"}');
+                    }
+                    if (data.cmd === 'getPositionForId') {
+                        console.log("\n\n");
+                        console.log("⌨️ Commande : " + data.cmd);
+                        console.log("🤝 GameCode : " + data.gameCode);
+                        console.log("🙋 Liste ID : " + data.ids);
+                        console.log("\n");
+
+                        try {
+                            // Find the room based on the game code
+                            const room = await Room.findOne({ where: { gameCode: data.gameCode } });
+
+                            if (room) {
+                                // Get the positions of the users in the userParty table for the specified game
+                                const userParties = await userParty.findAll({
+                                    where: { UserId: data.ids, gameID: room.id },
+                                    attributes: ['UserId', 'Position']
+                                });
+
+                                // Create a list of positions
+                                const positions = userParties.map(userParty => ({
+                                    userId: userParty.UserId,
+                                    position: userParty.Position
+                                }));
+
+                                // Send the list of positions to the client
+                                ws.send(JSON.stringify({
+                                    cmd: 'returnPositions',
+                                    positions: positions
+                                }));
+                            } else {
+                                // Send error response if the room is not found
+                                ws.send(JSON.stringify({ cmd: data.cmd, status: 'error', message: 'Room not found' }));
+                            }
+                        } catch (error) {
+                            console.error('Error getting positions:', error);
+                            // Send error response
+                            ws.send(JSON.stringify({ cmd: data.cmd, status: 'error', message: 'Internal server error' }));
+                        }
                     }
                     if (data.cmd === 'updateSeekerStatus') {
                         try {

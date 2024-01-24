@@ -2,16 +2,14 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('ws');
 const crypto = require('crypto');
+const User = require('./table/user'); // Importer le modèle User depuis le fichier existant
+const Room = require('./table/room'); // Importer le modèle Room depuis le fichier existant
+const userParty = require('./table/userParty'); // Importer le modèle userParty depuis le fichier existant
 const nodemailer = require('nodemailer');
 
 const resetPasswordRoute = require('./resetPasswordRoute'); // Remplacez par le chemin réel de votre route
 
 const createGameRoute = require('./createGameRoute'); // GameRoute
-
-// Importer les modèles Sequelize
-const dbSync = require('./db/dbSync');
-dbSync();
-
 
 /////// HTTPS ///////
 const https = require('https');
@@ -44,7 +42,35 @@ app.use(express.json()); // Utilisez le middleware pour traiter les données JSO
 
 app.get('/', (req, res) => res.send('Hello, you!'));
 
-const connectionsByGameCode = {};
+User.sync()
+    .then(() => {
+        console.log('Model synchronized successfully');
+        server.listen(PORT, () => console.log(`Listening on ${PORT}`));
+    })
+    .catch((error) => {
+        console.error('Error syncing User model:', error);
+    });
+
+// Synchronisez le modèle avec la base de données
+Room.sync({ alter: true })
+  .then(() => {
+    console.log('Model synchronized successfully');
+  })
+  .catch((error) => {
+    console.error('Error syncing Room model:', error);
+  });
+
+userParty.sync({ alter: true })
+  .then(() => {
+    console.log('Model synchronized successfully');
+  })
+  .catch((error) => {
+    console.error('Error syncing Room model:', error);
+  });
+
+  const connectionsByGameCode = {};
+
+
 
 wss.on('connection', function(ws, req) {
     ws.on('message', async message => {
@@ -452,13 +478,17 @@ wss.on('connection', function(ws, req) {
                                     where: { UserId: data.ids, gameID: room.id },
                                     attributes: ['UserId', 'Position']
                                 });
-
-                                // Create a list of positions
-                                const positions = userParties.map(userParty => ({
-                                    userId: userParty.UserId,
-                                    position: userParty.Position
+                    
+                                // Fetch user information for each userParty
+                                const positions = await Promise.all(userParties.map(async (userParty) => {
+                                    const user = await User.findOne({ where: { id: userParty.UserId } });
+                                    return {
+                                        userId: userParty.UserId,
+                                        username: user ? user.username : null,
+                                        position: userParty.Position
+                                    };
                                 }));
-
+                    
                                 // Send the list of positions to the client
                                 ws.send(JSON.stringify({
                                     cmd: 'returnPositions',

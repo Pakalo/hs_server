@@ -105,9 +105,15 @@ wss.on('connection', function(ws, req) {
   
                             //vérifie si le message est une image
                             // const isMessageImage = isImage(Buffer.from(sanitizedMessage, 'utf-8'));
+                            //On récupére l'username grâce à l'email
+                            const user = await User.findOne({
+                                where: {
+                                    email: data.email,
+                                }
+                            });
   
                             // Préparez le message à envoyer
-                            const messageToSend = JSON.stringify({ 'cmd':'ReceiveMessage', message: data.message, username: data.username, timestamp: data.date});
+                            const messageToSend = JSON.stringify({ 'cmd':'ReceiveMessage', message: data.message, username: user.username, email: data.email, timestamp: data.date});
                             console.log("📩 Message à envoyer : " + messageToSend);
                             // Utilisez sendUpdateToGamePlayers pour diffuser le message
                             sendUpdateToGamePlayers(data.gameCode, messageToSend);

@@ -74,6 +74,7 @@ userParty.sync({ alter: true })
 
 wss.on('connection', function(ws, req) {
     ws.on('message', async message => {
+        console.log("🎈🥎⚾ Message reçu : " + message);
         const datastring = message.toString();
         if (datastring.charAt(0) === "{") {
             const data = JSON.parse(datastring.replace(/'/g, '"'));
@@ -94,6 +95,23 @@ wss.on('connection', function(ws, req) {
                         }
                     
                         console.log("socket list" + connectionsByGameCode[data.gameCode]);
+                    }
+                    if (data.cmd === 'sendMessage') {
+                        // Vérifiez si le message contient un contenu
+                        console.log("📩 Message : " + data.message);
+                        if (data.message) {
+                          // sanitize the message , permet de trier les messages avec la ban liste
+                            // const sanitizedMessage = sanitizeMessage(data.message);
+  
+                            //vérifie si le message est une image
+                            // const isMessageImage = isImage(Buffer.from(sanitizedMessage, 'utf-8'));
+  
+                            // Préparez le message à envoyer
+                            const messageToSend = JSON.stringify({ 'cmd':'ReceiveMessage', message: data.message, username: data.username, timestamp: data.date});
+                            console.log("📩 Message à envoyer : " + messageToSend);
+                            // Utilisez sendUpdateToGamePlayers pour diffuser le message
+                            sendUpdateToGamePlayers(data.gameCode, messageToSend);
+                        }
                     }
                     if (data.cmd === 'getPlayerlist') {
                         try {
@@ -710,6 +728,32 @@ ws.on('close', () => {
     });
 });
 });
+
+function sanitizeMessage(message) {
+    if (typeof message === 'string') {
+      const normalizedMessage = Diacritics.remove(message);
+      return bannedWords.reduce((acc, word) => {
+        const regex = new RegExp('\\b' + word + '\\b', 'gi');
+        return acc.replace(regex, '*'.repeat(word.length));
+      }, normalizedMessage);
+    } else {
+      const normalizedMessage = Diacritics.remove(message.toString('utf-8'));
+      return bannedWords.reduce((acc, word) => {
+        const regex = new RegExp('\\b' + word + '\\b', 'gi');
+        return acc.replace(regex, '*'.repeat(word.length));
+      }, normalizedMessage);
+    }
+  }
+  
+  function isImage(data) {
+    // Vérifiez si les premiers octets du message correspondent à une signature JPEG
+    return (
+      data[0] === 0xFF &&
+      data[1] === 0xD8 &&
+      data[data.length - 2] === 0xFF &&
+      data[data.length - 1] === 0xD9
+    );
+  }
 
 function sendUpdateToGamePlayers(gameCode, message) {
     const connections = connectionsByGameCode[gameCode] || [];

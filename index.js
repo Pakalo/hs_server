@@ -113,7 +113,12 @@ wss.on('connection', function(ws, req) {
                             });
   
                             // Préparez le message à envoyer
-                            const messageToSend = JSON.stringify({ 'cmd':'ReceiveMessage', message: data.message, username: user.username, email: data.email, timestamp: data.date});
+                            const messageToSend = JSON.stringify({
+                                'cmd': 'ReceiveMessage',
+                                'message': data.message,
+                                'username': user.username,
+                                'email': data.email,
+                            }).replace(/'/g, "\\'");
                             console.log("📩 Message à envoyer : " + messageToSend);
                             // Utilisez sendUpdateToGamePlayers pour diffuser le message
                             sendUpdateToGamePlayers(data.gameCode, messageToSend);
@@ -261,7 +266,24 @@ wss.on('connection', function(ws, req) {
                                     const remainingPlayers = await userParty.count({
                                         where: { gameID: room.id, Seeker: false, Found: false }
                                     });
-                    
+                                    
+                                    const user = await User.findOne({ where: { id: data.playerId } });
+                                    const username = user ? user.username : 'Unknown';
+                
+                                    // Prepare the message to send
+                                    const messageToSend = JSON.stringify({
+                                        'cmd': 'ReceiveMessage',
+                                        'message': `${username} has been found!`,
+                                        'username': 'System',
+                                        'email': '',
+                                        'timestamp': new Date().toISOString()
+                                    });
+                
+                                    console.log("📩 Message à envoyer : " + messageToSend);
+                
+                                    // Use sendUpdateToGamePlayers to broadcast the message
+                                    sendUpdateToGamePlayers(data.gameCode, messageToSend);
+
                                     if (remainingPlayers === 0) {
                                         // If there are no remaining players, send the 'seeker win' command to the client
                                         sendUpdateToGamePlayers(data.gameCode, '{"cmd":"seekerWin"}');

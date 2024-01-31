@@ -37,7 +37,7 @@ router.get('/reset-password/:token', async (req, res) => {
       return res.status(400).send('Le lien de réinitialisation du mot de passe est invalide ou a expiré.');
     }
 
-    res.sendFile(path.join(__dirname, '', '/reset-password.html'));
+    res.sendFile(path.join(__dirname, '', '../html/reset-password.html'));
   } catch (error) {
     console.error('Erreur lors de la vérification du jeton de réinitialisation :', error);
     res.status(500).send('Une erreur est survenue lors de la vérification du lien de réinitialisation.');

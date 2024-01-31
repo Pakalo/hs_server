@@ -1,7 +1,7 @@
 const express = require('express');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
-const User = require('./table/user');
+const User = require('../table/user');
 const path = require('path');
 
 const router = express.Router();

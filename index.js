@@ -7,9 +7,9 @@ const Room = require('./table/room'); // Importer le modèle Room depuis le fich
 const userParty = require('./table/userParty'); // Importer le modèle userParty depuis le fichier existant
 const nodemailer = require('nodemailer');
 
-const resetPasswordRoute = require('./resetPasswordRoute'); // Remplacez par le chemin réel de votre route
+const resetPasswordRoute = require('./routes/resetPasswordRoute'); // Remplacez par le chemin réel de votre route
 
-const createGameRoute = require('./createGameRoute'); // GameRoute
+const createGameRoute = require('./routes/createGameRoute'); // GameRoute
 
 /////// HTTPS ///////
 const https = require('https');

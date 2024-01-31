@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Room = require('./table/room');
+const Room = require('../table/room');
 const crypto = require('crypto');
 
 router.post('/createGame', async (req, res) => {

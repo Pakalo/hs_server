@@ -2,9 +2,6 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('ws');
 const crypto = require('crypto');
-const User = require('./table/user'); // Importer le modèle User depuis le fichier existant
-const Room = require('./table/room'); // Importer le modèle Room depuis le fichier existant
-const userParty = require('./table/userParty'); // Importer le modèle userParty depuis le fichier existant
 const nodemailer = require('nodemailer');
 
 const resetPasswordRoute = require('./routes/resetPasswordRoute'); // Remplacez par le chemin réel de votre route
@@ -42,7 +39,17 @@ app.use(express.json()); // Utilisez le middleware pour traiter les données JSO
 
 app.get('/', (req, res) => res.send('Hello, you!'));
 
-User.sync()
+
+// const dbSync = require('./db/dbSync');
+// dbSync();
+
+const User = require('./table/user'); // Importer le modèle User depuis le fichier existant
+const Room = require('./table/room'); // Importer le modèle Room depuis le fichier existant
+const userParty = require('./table/userParty'); // Importer le modèle userParty depuis le fichier existant
+
+// Syncro des models / database
+{
+    User.sync()
     .then(() => {
         console.log('Model synchronized successfully');
         server.listen(PORT, () => console.log(`Listening on ${PORT}`));
@@ -67,9 +74,10 @@ userParty.sync({ alter: true })
   .catch((error) => {
     console.error('Error syncing Room model:', error);
   });
+}
 
-  const connectionsByGameCode = {};
 
+const connectionsByGameCode = {};
 
 
 wss.on('connection', function(ws, req) {
@@ -122,6 +130,14 @@ wss.on('connection', function(ws, req) {
                             console.log("📩 Message à envoyer : " + messageToSend);
                             // Utilisez sendUpdateToGamePlayers pour diffuser le message
                             sendUpdateToGamePlayers(data.gameCode, messageToSend);
+                        }
+                    }
+                    if (data.cmd === "messageImage") {
+                        // Vérifiez si le contenu est une image
+                        if (isImage(Buffer.from(data.content, 'base64'))) {
+                            console.log('Message image reçu');
+                            const message = { cmd: 'Message Image', content: data.content };
+                            sendUpdateToGamePlayers(data.gameCode, message);
                         }
                     }
                     if (data.cmd === 'getPlayerlist') {
@@ -745,16 +761,17 @@ wss.on('connection', function(ws, req) {
                     console.error('Error during login:', error);
                     ws.send(JSON.stringify({ success: false, message: 'An error occurred during login' }));
                 }        
+            }
         }
-    }
-});
-ws.on('close', () => {
-    // Parcourez toutes les gameId associées à cette connexion et retirez la connexion
-    console.log("⛔ Connection fermé");
-    Object.keys(connectionsByGameCode).forEach(gameCode => {
-        connectionsByGameCode[gameCode] = connectionsByGameCode[gameCode].filter(connection => connection !== ws);
     });
-});
+
+    ws.on('close', () => {
+        // Parcourez toutes les gameId associées à cette connexion et retirez la connexion
+        console.log("⛔ Connection fermé");
+        Object.keys(connectionsByGameCode).forEach(gameCode => {
+            connectionsByGameCode[gameCode] = connectionsByGameCode[gameCode].filter(connection => connection !== ws);
+        });
+    });
 });
 
 function sanitizeMessage(message) {

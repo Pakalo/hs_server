@@ -750,7 +750,7 @@ wss.on('connection', function(ws, req) {
 });
 ws.on('close', () => {
     // Parcourez toutes les gameId associées à cette connexion et retirez la connexion
-    console.log("connection fermé");
+    console.log("⛔ Connection fermé");
     Object.keys(connectionsByGameCode).forEach(gameCode => {
         connectionsByGameCode[gameCode] = connectionsByGameCode[gameCode].filter(connection => connection !== ws);
     });

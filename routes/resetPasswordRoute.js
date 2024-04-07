@@ -1,6 +1,6 @@
 const express = require('express');
 const nodemailer = require('nodemailer');
-const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const User = require('../table/user');
 const path = require('path');
 
@@ -65,7 +65,7 @@ router.post('/reset-password/:token', async (req, res) => {
     }
 
     // Utilisez l'algorithme MD5 pour hacher le nouveau mot de passe
-    const hashedPassword = crypto.createHash('md5').update(newPassword).digest('hex');
+    const hashedPassword = bcrypt.hashSync(newPassword, 10);
 
     user.password = hashedPassword;
     user.resettoken = null;

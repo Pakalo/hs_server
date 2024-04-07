@@ -1,33 +1,29 @@
-const User = require('../table/user'); // Importer le modèle User depuis le fichier existant
-const Room = require('../table/room'); // Importer le modèle Room depuis le fichier existant
-const userParty = require('../table/userParty'); // Importer le modèle userParty depuis le fichier existant
+const User = require('../table/user');
+const Room = require('../table/room');
+const userParty = require('../table/userParty');
 
+async function dbSync() {
+  try {
+    // Sync with force flag for initial setup or changes to model definitions
+    await User.sync({ force: false }); // Adjust force based on your requirements
+    console.log('🆗 Model User has been synchronized');
 
-function dbSync() {
-    User.sync()
-    .then(() => {
-        console.log('✅ Model USER bien synchronisé');
-    })
-    .catch((error) => {
-        console.error('❌ ERREUR syncro model user: ', error);
-    });
+    // Sync Room with alter for table schema updates
+    await Room.sync({ alter: true });
+    console.log('🆗 Model Room has been synchronized');
 
-    Room.sync({ alter: true })
-  .then(() => {
-    console.log('✅ Model ROOM bien synchronisé')
-  })
-  .catch((error) => {
-    console.error('❌ ERREUR syncro model room: ', error);
-  });
-
-userParty.sync({ alter: true })
-  .then(() => {
-    console.log('✅ Model USERPARTY bien synchronisé');
-  })
-  .catch((error) => {
-    console.error('❌ ERREUR syncro model userParty: ', error);
-  });
-
+    // Sync userParty with alter for table schema updates
+    await userParty.sync({ alter: true });
+    console.log('🆗 Model userParty has been synchronized');
+  } catch (error) {
+    console.error('❌ Error synchronizing models:', error);
+    throw error; // Re-throw to allow handling in other parts of your application
+  }
 }
 
-module.exports = dbSync;
+module.exports = {
+  dbSync,
+  User, // Export other models if needed
+  Room,
+  userParty,
+};

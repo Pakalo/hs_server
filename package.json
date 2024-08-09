@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "npx nodemon index.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "cleanup": "node fonction/cleanupRooms.js"
   },
   "author": "Kylian",
   "license": "ISC",
@@ -13,9 +14,11 @@
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.1",
     "express": "^4.18.2",
+    "node-cron": "^3.0.3",
     "nodemailer": "^6.9.9",
     "nodemon": "^3.0.3",
     "pg": "^8.11.3",
+    "pm2": "^5.4.2",
     "sequelize": "^6.36.0",
     "ws": "^8.16.0"
   }

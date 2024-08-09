@@ -14,7 +14,7 @@ module.exports = async function login(data, ws) {
             // Vérifier si le mot de passe est correct
             if (passwordMatch == true) {
                 // Envoyer le nom d'utilisateur à l'utilisateur et le code de statut est "succes"
-                const loginData = '{"email":"' + user.email + '","DateCreation":"' + user.createdAt+ '","userId":"' + user.id + '","username":"' + user.username + '","status":"success"}';
+                const loginData = '{"email":"' + user.email + '","DateCreation":"' + user.createdAt+ '","userId":"' + user.id + '","nbGames":"' + user.nbGames + '","nbWonGames":"' + user.nbWonGames + '","username":"' + user.username + '","status":"success"}';
                 // Envoyer les données à l'utilisateur
                 console.log("Envoyé : " + loginData);
                 ws.send(loginData);

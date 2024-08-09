@@ -37,7 +37,7 @@ router.get('/reset-password/:token', async (req, res) => {
       return res.status(400).send('Le lien de réinitialisation du mot de passe est invalide ou a expiré.');
     }
 
-    res.sendFile(path.join(__dirname, '', '../html/reset-password.html'));
+    res.sendFile(path.join(__dirname, '../html/reset-password.html'));
   } catch (error) {
     console.error('Erreur lors de la vérification du jeton de réinitialisation :', error);
     res.status(500).send('Une erreur est survenue lors de la vérification du lien de réinitialisation.');
@@ -64,7 +64,7 @@ router.post('/reset-password/:token', async (req, res) => {
       return res.status(400).send('Les mots de passe ne correspondent pas.');
     }
 
-    // Utilisez l'algorithme MD5 pour hacher le nouveau mot de passe
+    // Utilisez bcrypt pour hacher le nouveau mot de passe
     const hashedPassword = bcrypt.hashSync(newPassword, 10);
 
     user.password = hashedPassword;
@@ -72,17 +72,21 @@ router.post('/reset-password/:token', async (req, res) => {
     user.resettokenexpiry = null;
     await user.save();
 
-    return res.send('Le mot de passe a été réinitialisé avec succès.');
+    // Redirection vers la page de confirmation
+    return res.redirect('/password-changed');
   } catch (error) {
     console.error('Erreur lors de la réinitialisation du mot de passe :', error);
     return res.send('Une erreur est survenue lors de la réinitialisation du mot de passe.');
   }
 });
 
-
+// Route pour la page de confirmation
+router.get('/password-changed', (req, res) => {
+  res.sendFile(path.join(__dirname, '../html/password-changed.html'));
+});
 
 router.use(express.static('public'));
-const bodyParser = require('body-parser'); // Ajoutez cette ligne
+const bodyParser = require('body-parser');
 router.use(bodyParser.json());
 
 module.exports = router;

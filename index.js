@@ -11,6 +11,7 @@ const path = require('path'); // Ajout de l'importation du module path
 //////////////////////////////
 
 const resetPasswordRoute = require('./routes/resetPasswordRoute');
+const deleteAccountRoute = require('./routes/deleteAccountRoute');
 
 //////////////////////////////
 //////////  HTTPS  ///////////
@@ -53,7 +54,7 @@ app.get('/', (req, res) => res.send('Hide & Street Server is running!'));
 ////////  Syncro DB  /////////
 //////////////////////////////
 
-const { dbSync, User, Room, userParty } = require('./db/dbSync');
+const { dbSync, User, Room, userParty, DeleteList } = require('./db/dbSync');
 
 dbSync()
   .then(() => {
@@ -587,3 +588,4 @@ app.use(express.static('public'));
 const bodyParser = require('body-parser');
 app.use(bodyParser.json());
 app.use(resetPasswordRoute);
+app.use(deleteAccountRoute);

@@ -3,6 +3,10 @@
 //////////////////////////////
 
 const express = require('express');
+const session = require('express-session');
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+const bcrypt = require('bcryptjs');
 const { Server } = require('ws');
 const path = require('path'); // Ajout de l'importation du module path
 
@@ -12,6 +16,8 @@ const path = require('path'); // Ajout de l'importation du module path
 
 const resetPasswordRoute = require('./routes/resetPasswordRoute');
 const deleteAccountRoute = require('./routes/deleteAccountRoute');
+const adminRoute = require('./routes/adminRoute');
+const authRoute = require('./routes/authRoute');
 
 //////////////////////////////
 //////////  HTTPS  ///////////
@@ -48,6 +54,7 @@ app.use(express.json()); // Utilisez le middleware pour traiter les données JSO
 
 // Page de base (app.hideandstreet.furrball.fr)
 app.get('/', (req, res) => res.send('Hide & Street Server is running!'));
+
 
 
 //////////////////////////////
@@ -557,6 +564,65 @@ wss.on('connection', function(ws, req) {
     });
 });
 
+
+//////////////////////////////
+//////////  ADMIN  ///////////
+//////////////////////////////
+
+// Middleware pour analyser les données du corps des requêtes
+app.use(express.urlencoded({ extended: true }));
+
+// Configurer les sessions
+app.use(session({
+  secret: 'votre_secret_de_session',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false }  // Utilisez true si votre site est en HTTPS
+}));
+
+// Initialiser passport
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Configurer le moteur de templates (par exemple, EJS)
+app.set('view engine', 'ejs');
+
+// Configurer la stratégie locale de Passport pour l'authentification
+passport.use(new LocalStrategy({
+  usernameField: 'email',  // Par défaut, Passport utilise 'username', changez-le pour 'email' si nécessaire
+}, async (email, password, done) => {
+  try {
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return done(null, false, { message: 'Utilisateur non trouvé.' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return done(null, false, { message: 'Mot de passe incorrect.' });
+    }
+
+    return done(null, user);
+  } catch (error) {
+    return done(error);
+  }
+}));
+
+// Sérialiser l'utilisateur dans la session
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+// Désérialiser l'utilisateur à partir de la session
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findByPk(id);
+    done(null, user);
+  } catch (error) {
+    done(error, null);
+  }
+});
+
   
 //////////////////////////////
 ////////  FUNCTIONS  /////////
@@ -580,8 +646,12 @@ module.exports = {
     sendUpdateToGamePlayers
 }
 
+app.use('/', authRoute);
+app.use('/', adminRoute);
+
+
 // Servir les fichiers statiques (CSS, JS, images)
-app.use('/style', express.static(path.join(__dirname, 'html/style')));
+app.use('/css', express.static(path.join(__dirname, 'public/css')));
 app.use('/html', express.static(path.join(__dirname, 'html')));
 
 app.use(express.static('public'));

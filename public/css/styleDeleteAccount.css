@@ -88,3 +88,25 @@ button:hover {
 .toggle-password:hover {
     color: #666;
 }
+
+/* Styles pour les messages d'information */
+#message {
+    display: none;
+    margin: 20px auto;
+    padding: 15px;
+    max-width: 400px;
+    text-align: center;
+    border-radius: 5px;
+}
+
+#message.success {
+    background-color: #dff0d8;
+    color: #3c763d;
+    border: 1px solid #d6e9c6;
+}
+
+#message.error {
+    background-color: #f2dede;
+    color: #a94442;
+    border: 1px solid #ebccd1;
+}

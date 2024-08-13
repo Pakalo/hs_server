@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <h1>Panel d'administration</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Pseudo</th>
+                <th>Email</th>
+                <th>Date de création</th>
+                <th>Parties jouées</th>
+                <th>Parties gagnées</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% users.forEach(user => { %>
+            <tr>
+                <td><%= user.id %></td>
+                <td><%= user.username %></td>
+                <td><%= user.email %></td>
+                <td><%= user.createdAt.toLocaleDateString() %></td>
+                <td><%= user.nbGames %></td>
+                <td><%= user.nbWonGames %></td>
+                <td>
+                    <form action="/admin/reset-password/<%= user.id %>" method="post" style="display:inline;">
+                        <button type="submit">Réinitialiser le mot de passe</button>
+                    </form>
+                    <form action="/admin/delete-account/<%= user.id %>" method="post" style="display:inline;">
+                        <button type="submit">Supprimer le compte</button>
+                    </form>
+                </td>
+            </tr>
+            <% }) %>
+        </tbody>
+    </table>
+</body>
+</html>

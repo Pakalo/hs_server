@@ -120,3 +120,16 @@ button.delete:hover {
     color: #a94442;
     border: 1px solid #ebccd1;
 }
+
+
+.marked-for-deletion {
+    background-color: #f8d7da;
+}
+
+.cancel-delete {
+    background-color: #28a745;
+}
+
+.cancel-delete:hover {
+    background-color: #218838;
+}

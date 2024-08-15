@@ -38,13 +38,23 @@ router.get('/admin', async (req, res) => {
       attributes: ['id', 'username', 'email', 'createdAt', 'nbGames', 'nbWonGames']
     });
 
-    res.render('admin', { users });  // Utilisation d'un moteur de template comme EJS
+    // Récupérer la delete_list pour vérifier si l'utilisateur est marqué pour suppression
+    const deleteList = await DeleteList.findAll();
+
+    // Ajouter un drapeau pour les utilisateurs marqués pour suppression
+    const usersWithDeleteFlag = users.map(user => {
+      const isInDeleteList = deleteList.some(del => del.email === user.email);
+      return { ...user.get({ plain: true }), isInDeleteList };
+    });
+
+    res.render('admin', { users: usersWithDeleteFlag });  // Utilisation d'un moteur de template comme EJS
   } catch (error) {
     console.error('Erreur lors de la récupération des utilisateurs :', error);
     res.status(500).send('Erreur serveur');
   }
 });
 
+// Réinitialisation du mot de passe
 router.post('/admin/reset-password/:id', async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
@@ -73,6 +83,7 @@ router.post('/admin/reset-password/:id', async (req, res) => {
   }
 });
 
+// Ajout d'un compte à la delete_list
 router.post('/admin/delete-account/:id', async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
@@ -86,6 +97,23 @@ router.post('/admin/delete-account/:id', async (req, res) => {
   } catch (error) {
     console.error('Erreur lors de la suppression du compte :', error);
     res.status(500).send('Erreur serveur');
+  }
+});
+
+// Route pour gérer l'ajout ou la suppression de la delete_list
+router.post('/admin/toggle-delete', async (req, res) => {
+  const { email, addToDeleteList } = req.body;
+
+  try {
+    if (addToDeleteList) {
+      await DeleteList.create({ email });
+    } else {
+      await DeleteList.destroy({ where: { email } });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.json({ success: false, message: 'Erreur lors de la mise à jour de la liste.' });
   }
 });
 

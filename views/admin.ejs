@@ -22,7 +22,7 @@
         </thead>
         <tbody>
             <% users.forEach(user => { %>
-            <tr>
+            <tr class="<%= user.isInDeleteList ? 'marked-for-deletion' : '' %>">
                 <td><%= user.id %></td>
                 <td><%= user.username %></td>
                 <td><%= user.email %></td>
@@ -33,13 +33,39 @@
                     <form action="/admin/reset-password/<%= user.id %>" method="post" style="display:inline;">
                         <button type="submit">Réinitialiser le mot de passe</button>
                     </form>
-                    <form action="/admin/delete-account/<%= user.id %>" method="post" style="display:inline;">
-                        <button type="submit">Supprimer le compte</button>
-                    </form>
+                    <% if (user.isInDeleteList) { %>
+                        <button class="cancel-delete" onclick="toggleDelete('<%= user.email %>', false)">Ne plus supprimer</button>
+                    <% } else { %>
+                        <button class="delete" onclick="toggleDelete('<%= user.email %>', true)">Supprimer le compte</button>
+                    <% } %>
                 </td>
             </tr>
             <% }) %>
         </tbody>
     </table>
+
+    <script>
+        function toggleDelete(email, addToDeleteList) {
+            fetch('/admin/toggle-delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email: email, addToDeleteList: addToDeleteList }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload(); // Recharge la page pour refléter les changements
+                } else {
+                    alert('Erreur : ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la mise à jour.');
+            });
+        }
+    </script>
 </body>
 </html>

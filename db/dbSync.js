@@ -1,33 +1,31 @@
-const User = require('../table/user'); // Importer le modèle User depuis le fichier existant
-const Room = require('../table/room'); // Importer le modèle Room depuis le fichier existant
-const userParty = require('../table/userParty'); // Importer le modèle userParty depuis le fichier existant
+const User = require('../table/user');
+const Room = require('../table/room');
+const userParty = require('../table/userParty');
+const DeleteList = require('../table/deleteList');
 
+async function dbSync() {
+  try {
+    await User.sync({ alter: true });  // Utiliser alter pour mettre à jour le schéma sans perdre de données
+    console.log('🆗 Model User has been synchronized');
 
-function dbSync() {
-    User.sync()
-    .then(() => {
-        console.log('✅ Model USER bien synchronisé');
-    })
-    .catch((error) => {
-        console.error('❌ ERREUR syncro model user: ', error);
-    });
+    await Room.sync({ alter: true });
+    console.log('🆗 Model Room has been synchronized');
 
-    Room.sync({ alter: true })
-  .then(() => {
-    console.log('✅ Model ROOM bien synchronisé')
-  })
-  .catch((error) => {
-    console.error('❌ ERREUR syncro model room: ', error);
-  });
+    await userParty.sync({ alter: true });
+    console.log('🆗 Model userParty has been synchronized');
 
-userParty.sync({ alter: true })
-  .then(() => {
-    console.log('✅ Model USERPARTY bien synchronisé');
-  })
-  .catch((error) => {
-    console.error('❌ ERREUR syncro model userParty: ', error);
-  });
-
+    await DeleteList.sync({ alter: true });
+    console.log('🆗 Model DeleteList has been synchronized');
+  } catch (error) {
+    console.error('❌ Error synchronizing models:', error);
+    throw error;
+  }
 }
 
-module.exports = dbSync;
+module.exports = {
+  dbSync,
+  User,
+  Room,
+  userParty,
+  DeleteList,
+};

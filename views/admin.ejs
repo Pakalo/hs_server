@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+    <%- include('partials/header') %>
+    
+    <div class="container">
+        <h1>Panel d'administration</h1>
+
+        <!-- Barre de recherche -->
+        <input type="text" id="searchInput" placeholder="Rechercher par nom ou e-mail..." onkeyup="filterTable()">
+
+        <table id="adminTable">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0)">ID</th>
+                    <th onclick="sortTable(1)">Pseudo</th>
+                    <th onclick="sortTable(2)">Email</th>
+                    <th onclick="sortTable(3)">Date de création</th>
+                    <th onclick="sortTable(4)">Parties jouées</th>
+                    <th onclick="sortTable(5)">Parties gagnées</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="userTableBody">
+                <% users.forEach(user => { %>
+                <tr class="<%= user.isInDeleteList ? 'marked-for-deletion' : '' %>">
+                    <td><%= user.id %></td>
+                    <td><%= user.username %></td>
+                    <td><%= user.email %></td>
+                    <td><%= user.createdAt.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) %></td>
+                    <td><%= user.nbGames %></td>
+                    <td><%= user.nbWonGames %></td>
+                    <td>
+                        <form action="/admin/reset-password/<%= user.id %>" method="post" style="display:inline;">
+                            <button type="submit">Réinitialiser le mot de passe</button>
+                        </form>
+                        <% if (user.isInDeleteList) { %>
+                            <button class="cancel-delete" onclick="toggleDelete('<%= user.email %>', false)">Ne plus supprimer</button>
+                        <% } else { %>
+                            <button class="delete" onclick="toggleDelete('<%= user.email %>', true)">Supprimer le compte</button>
+                        <% } %>
+                    </td>
+                </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        function filterTable() {
+            const input = document.getElementById('searchInput').value.toLowerCase();
+            const tableBody = document.getElementById('userTableBody');
+            const rows = tableBody.getElementsByTagName('tr');
+
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                const name = cells[1].innerText.toLowerCase();
+                const email = cells[2].innerText.toLowerCase();
+
+                if (name.includes(input) || email.includes(input)) {
+                    rows[i].style.display = '';
+                } else {
+                    rows[i].style.display = 'none';
+                }
+            }
+        }
+
+        function sortTable(columnIndex) {
+            const table = document.getElementById("adminTable");
+            const rows = table.getElementsByTagName("tr");
+            let switching = true;
+            let shouldSwitch, i;
+            let dir = "asc";
+            let switchCount = 0;
+
+            while (switching) {
+                switching = false;
+                const rowsArray = Array.from(rows).slice(1); // Exclude header row
+
+                for (i = 0; i < rowsArray.length - 1; i++) {
+                    shouldSwitch = false;
+                    const x = rowsArray[i].getElementsByTagName("td")[columnIndex];
+                    const y = rowsArray[i + 1].getElementsByTagName("td")[columnIndex];
+
+                    let xContent = x.innerText.toLowerCase();
+                    let yContent = y.innerText.toLowerCase();
+
+                    console.log(`Comparing: ${xContent} with ${yContent}`); // Ligne de débogage
+
+                    if (columnIndex === 3) { // Si la colonne est une date (index 3)
+                        xContent = new Date(xContent.split('/').reverse().join('-'));
+                        yContent = new Date(yContent.split('/').reverse().join('-'));
+                        console.log(`Dates parsed: ${xContent} with ${yContent}`); // Ligne de débogage pour les dates
+                    } else if (!isNaN(xContent)) {
+                        xContent = parseFloat(xContent);
+                        yContent = parseFloat(yContent);
+                    }
+
+                    if ((dir === "asc" && xContent > yContent) || (dir === "desc" && xContent < yContent)) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                }
+
+                if (shouldSwitch) {
+                    rowsArray[i].parentNode.insertBefore(rowsArray[i + 1], rowsArray[i]);
+                    switching = true;
+                    switchCount++;
+                } else if (switchCount === 0 && dir === "asc") {
+                    dir = "desc";
+                    switching = true;
+                }
+            }
+        }
+
+        function toggleDelete(email, addToDeleteList) {
+            fetch('/admin/toggle-delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email: email, addToDeleteList: addToDeleteList }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload(); // Recharge la page pour refléter les changements
+                } else {
+                    alert('Erreur : ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la mise à jour.');
+            });
+        }
+
+        // Trier par défaut par ID lors du chargement de la page
+        document.addEventListener('DOMContentLoaded', () => {
+            sortTable(0);
+        });
+    </script>
+</body>
+</html>

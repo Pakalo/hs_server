@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete Account</title>
+    <link rel="stylesheet" href="/css/styleDeleteAccount.css">
+</head>
+<body>
+    <h1>Supprimer mon compte</h1>
+    <p>Attention : La suppression de votre compte est irréversible. Toutes vos données seront perdues.</p>
+
+    <form id="delete-account-form-step1">
+        <label for="email">Entrez votre adresse e-mail :</label>
+        <input type="email" id="email" name="email" required>
+        <button type="button" onclick="sendVerificationCode()">Envoyer le code de vérification</button>
+    </form>
+
+    <form id="delete-account-form-step2" style="display:none;">
+        <label for="verificationCode">Entrez le code de vérification :</label>
+        <input type="text" id="verificationCode" name="verificationCode" maxlength="6" required>
+        <button type="button" onclick="verifyAndDeleteAccount()">Confirmer la suppression du compte</button>
+    </form>
+
+    <script>
+        function sendVerificationCode() {
+            var email = document.getElementById("email").value;
+
+            fetch('/delete-account/send-code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email: email }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Le code de vérification a été envoyé à votre adresse e-mail.');
+                    document.getElementById("delete-account-form-step1").style.display = 'none';
+                    document.getElementById("delete-account-form-step2").style.display = 'block';
+                } else {
+                    alert('Erreur : ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur lors de l\'envoi du code de vérification :', error);
+                alert('Erreur lors de l\'envoi du code de vérification.');
+            });
+        }
+
+        function verifyAndDeleteAccount() {
+            var email = document.getElementById("email").value;
+            var verificationCode = document.getElementById("verificationCode").value;
+
+            fetch('/delete-account/verify-code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email: email, verificationCode: verificationCode }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Votre compte sera supprimé dans les 24 heures.');
+                } else {
+                    alert('Erreur : ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur lors de la suppression du compte :', error);
+                alert('Erreur lors de la suppression du compte.');
+            });
+        }
+    </script>
+</body>
+</html>

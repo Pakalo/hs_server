@@ -1,5 +1,5 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../db/sequelize');  // Update the import path
+const sequelize = require('../db/sequelize');
 
 const User = sequelize.define('User', {
     email: {
@@ -21,6 +21,29 @@ const User = sequelize.define('User', {
     resettokenexpiry: {
         type: DataTypes.DATE,
         allowNull: true,
+    },
+    deletetoken: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    deletetokenexpiry: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
+    nbGames: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0
+    },
+    nbWonGames: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0
+    },
+    isAdmin: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
     }
 }, {
     timestamps: true,

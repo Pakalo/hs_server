@@ -16,7 +16,7 @@ const path = require('path'); // Ajout de l'importation du module path
 
 const resetPasswordRoute = require('./routes/resetPasswordRoute');
 const deleteAccountRoute = require('./routes/deleteAccountRoute');
-const adminRoute = require('./routes/adminRoute');
+const adminRoute = require('./adminPanel/adminRoute');
 const authRoute = require('./routes/authRoute');
 
 //////////////////////////////

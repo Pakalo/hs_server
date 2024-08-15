@@ -22,6 +22,7 @@ h1 {
     margin-bottom: 30px;
 }
 
+/* Search Input */
 input[type="text"] {
     width: 100%;
     padding: 10px;
@@ -32,6 +33,7 @@ input[type="text"] {
     box-sizing: border-box;
 }
 
+/* Select Box */
 select {
     padding: 8px 12px;
     margin-bottom: 20px;
@@ -121,11 +123,12 @@ button.delete:hover {
     border: 1px solid #ebccd1;
 }
 
-
+/* Marked for Deletion */
 .marked-for-deletion {
     background-color: #f8d7da;
 }
 
+/* Cancel Delete Button */
 .cancel-delete {
     background-color: #28a745;
 }

@@ -8,6 +8,10 @@
 </head>
 <body>
     <h1>Panel d'administration</h1>
+
+    <!-- Barre de recherche -->
+    <input type="text" id="searchInput" placeholder="Rechercher par nom ou e-mail..." onkeyup="filterTable()">
+
     <table>
         <thead>
             <tr>
@@ -20,7 +24,7 @@
                 <th>Actions</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="userTableBody">
             <% users.forEach(user => { %>
             <tr class="<%= user.isInDeleteList ? 'marked-for-deletion' : '' %>">
                 <td><%= user.id %></td>
@@ -45,6 +49,24 @@
     </table>
 
     <script>
+        function filterTable() {
+            const input = document.getElementById('searchInput').value.toLowerCase();
+            const tableBody = document.getElementById('userTableBody');
+            const rows = tableBody.getElementsByTagName('tr');
+
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                const name = cells[1].innerText.toLowerCase();
+                const email = cells[2].innerText.toLowerCase();
+
+                if (name.includes(input) || email.includes(input)) {
+                    rows[i].style.display = '';
+                } else {
+                    rows[i].style.display = 'none';
+                }
+            }
+        }
+
         function toggleDelete(email, addToDeleteList) {
             fetch('/admin/toggle-delete', {
                 method: 'POST',
